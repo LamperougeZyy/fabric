@@ -173,7 +173,7 @@ func (s *TxSubmitter) sendTransactionInternal(txEnvelope *common.Envelope, ctx c
 
 func (s *TxSubmitter) CreateTxEnvelope(txBytes []byte) (string, *common.Envelope, error) {
 	// channelId string, creator []byte, signer SignerIdentity, cert *tls.Certificate
-	// , s.Config.ChannelId, s.Creator, s.Signer, s.OrdererClient.Certificate()
+	// , s.Config.channelId, s.Creator, s.Signer, s.OrdererClient.Certificate()
 	var tlsCertHash []byte
 	var err error
 	// check for client certificate and compute SHA2-256 on certificate if present

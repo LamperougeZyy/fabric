@@ -126,7 +126,7 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:a79e20cafae5bc666a1503bdb6f465f5cef80977ddb5f4ab85124a4f86b8dc22"
+  digest = "1:60bbb77c727e1c7e1b4409ec71c68891c5b5c2c86fc8efae2eb3155fba54f042"
   name = "github.com/docker/docker"
   packages = [
     "api/types",
@@ -149,6 +149,7 @@
     "pkg/longpath",
     "pkg/mount",
     "pkg/pools",
+    "pkg/pubsub",
     "pkg/stdcopy",
     "pkg/system",
   ]
@@ -960,6 +961,7 @@
     "github.com/Shopify/sarama",
     "github.com/Shopify/sarama/mocks",
     "github.com/davecgh/go-spew/spew",
+    "github.com/docker/docker/pkg/pubsub",
     "github.com/fsouza/go-dockerclient",
     "github.com/go-kit/kit/metrics",
     "github.com/go-kit/kit/metrics/prometheus",

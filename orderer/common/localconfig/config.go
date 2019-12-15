@@ -117,8 +117,10 @@ type Profile struct {
 
 // FileLedger contains configuration for the file-based ledger.
 type FileLedger struct {
-	Location string
-	Prefix   string
+	Location   string
+	Prefix     string
+	DataShards int
+	ParShards  int
 }
 
 // RAMLedger contains configuration for the RAM ledger.

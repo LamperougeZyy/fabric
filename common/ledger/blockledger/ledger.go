@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package blockledger
 
 import (
+	"github.com/hyperledger/fabric/common/ledger/blkstorage"
 	cb "github.com/hyperledger/fabric/protos/common"
 	ab "github.com/hyperledger/fabric/protos/orderer"
 )
@@ -22,6 +23,11 @@ type Factory interface {
 
 	// Close releases all resources acquired by the factory
 	Close()
+}
+
+type FactoryWithWatcher interface {
+	Factory
+	GetOrCreateWithWatcher(chainID string, watcher blkstorage.BlockFileWatcher) (ReadWriter, error)
 }
 
 // Iterator is useful for a chain Reader to stream blocks as they are created

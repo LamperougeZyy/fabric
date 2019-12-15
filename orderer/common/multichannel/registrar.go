@@ -11,6 +11,7 @@ package multichannel
 
 import (
 	"fmt"
+	"github.com/hyperledger/fabric/orderer/common/blockfilewatcher"
 	"sync"
 
 	"github.com/hyperledger/fabric/common/channelconfig"
@@ -96,7 +97,7 @@ type Registrar struct {
 	chains             map[string]*ChainSupport
 	config             localconfig.TopLevel
 	consenters         map[string]consensus.Consenter
-	ledgerFactory      blockledger.Factory
+	ledgerFactory      blockledger.FactoryWithWatcher
 	signer             crypto.LocalSigner
 	blockcutterMetrics *blockcutter.Metrics
 	systemChannelID    string
@@ -128,7 +129,7 @@ func configTx(reader blockledger.Reader) *cb.Envelope {
 // NewRegistrar produces an instance of a *Registrar.
 func NewRegistrar(
 	config localconfig.TopLevel,
-	ledgerFactory blockledger.Factory,
+	ledgerFactory blockledger.FactoryWithWatcher,
 	signer crypto.LocalSigner,
 	metricsProvider metrics.Provider,
 	callbacks ...channelconfig.BundleActor) *Registrar {
@@ -149,7 +150,8 @@ func (r *Registrar) Initialize(consenters map[string]consensus.Consenter) {
 	existingChains := r.ledgerFactory.ChainIDs()
 
 	for _, chainID := range existingChains {
-		rl, err := r.ledgerFactory.GetOrCreate(chainID)
+		watcher := blockfilewatcher.NewOrdererBlockFileWatcher(chainID)
+		rl, err := r.ledgerFactory.GetOrCreateWithWatcher(chainID, watcher)
 		if err != nil {
 			logger.Panicf("Ledger factory reported chainID %s but could not retrieve it: %s", chainID, err)
 		}
@@ -280,7 +282,8 @@ func (r *Registrar) newLedgerResources(configTx *cb.Envelope) *ledgerResources {
 
 	checkResourcesOrPanic(bundle)
 
-	ledger, err := r.ledgerFactory.GetOrCreate(chdr.ChannelId)
+	watcher := blockfilewatcher.NewOrdererBlockFileWatcher(chdr.ChannelId)
+	ledger, err := r.ledgerFactory.GetOrCreateWithWatcher(chdr.ChannelId, watcher)
 	if err != nil {
 		logger.Panicf("Error getting ledger for %s", chdr.ChannelId)
 	}
@@ -295,7 +298,8 @@ func (r *Registrar) newLedgerResources(configTx *cb.Envelope) *ledgerResources {
 
 // CreateChain makes the Registrar create a chain with the given name.
 func (r *Registrar) CreateChain(chainName string) {
-	lf, err := r.ledgerFactory.GetOrCreate(chainName)
+	watcher := blockfilewatcher.NewOrdererBlockFileWatcher(chainName)
+	lf, err := r.ledgerFactory.GetOrCreateWithWatcher(chainName, watcher)
 	if err != nil {
 		logger.Panicf("Failed obtaining ledger factory for %s: %v", chainName, err)
 	}

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package server
 
 import (
+	"github.com/hyperledger/fabric/orderer/common/blockfilewatcher"
 	"sync"
 	"time"
 
@@ -121,12 +122,13 @@ func (ri *replicationInitiator) ReplicateChains(lastConfigBlock *common.Block, c
 }
 
 type ledgerFactory struct {
-	blockledger.Factory
+	blockledger.FactoryWithWatcher
 	onBlockCommit cluster.BlockCommitFunc
 }
 
 func (lf *ledgerFactory) GetOrCreate(chainID string) (cluster.LedgerWriter, error) {
-	ledger, err := lf.Factory.GetOrCreate(chainID)
+	watcher := blockfilewatcher.NewOrdererBlockFileWatcher(chainID)
+	ledger, err := lf.FactoryWithWatcher.GetOrCreateWithWatcher(chainID, watcher)
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +270,7 @@ func (bg *blockGetter) Block(number uint64) *common.Block {
 }
 
 type verifierLoader struct {
-	ledgerFactory   blockledger.Factory
+	ledgerFactory   blockledger.FactoryWithWatcher
 	verifierFactory cluster.VerifierFactory
 	logger          *flogging.FabricLogger
 	onFailure       func(block *common.Block)
@@ -291,7 +293,8 @@ func (vl *verifierLoader) loadVerifiers() verifiersByChannel {
 }
 
 func (vl *verifierLoader) loadVerifier(chain string) cluster.BlockVerifier {
-	ledger, err := vl.ledgerFactory.GetOrCreate(chain)
+	watcher := blockfilewatcher.NewOrdererBlockFileWatcher(chain)
+	ledger, err := vl.ledgerFactory.GetOrCreateWithWatcher(chain, watcher)
 	if err != nil {
 		vl.logger.Panicf("Failed obtaining ledger for channel %s", chain)
 	}

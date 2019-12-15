@@ -49,6 +49,11 @@ type BlockStoreProvider interface {
 	Close()
 }
 
+type BlockStoreProviderWithWatcher interface {
+	BlockStoreProvider
+	OpenBlockStoreWithWatcher(ledgerid string, watcher BlockFileWatcher) (BlockStore, error)
+}
+
 // BlockStore - an interface for persisting and retrieving blocks
 // An implementation of this interface is expected to take an argument
 // of type `IndexConfig` which configures the block store on what items should be indexed
@@ -63,4 +68,13 @@ type BlockStore interface {
 	RetrieveBlockByTxID(txID string) (*common.Block, error)
 	RetrieveTxValidationCodeByTxID(txID string) (peer.TxValidationCode, error)
 	Shutdown()
+}
+
+type BlockFileWatcher interface {
+	BlockFileFull(suffixNum int)
+}
+
+type BlockFileNotifier interface {
+	Notify(suffixNum int)
+	RegistWatcher(watcher BlockFileWatcher)
 }

@@ -94,6 +94,10 @@ func GetLastConfigIndexFromBlockOrPanic(block *cb.Block) uint64 {
 	return index
 }
 
+func GetLastConfigBlock() *cb.Block {
+
+}
+
 // GetBlockFromBlockBytes marshals the bytes into Block
 func GetBlockFromBlockBytes(blockBytes []byte) (*cb.Block, error) {
 	block := &cb.Block{}

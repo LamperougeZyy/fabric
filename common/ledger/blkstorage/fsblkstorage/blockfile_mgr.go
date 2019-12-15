@@ -44,6 +44,7 @@ type blockfileMgr struct {
 	cpInfoCond        *sync.Cond
 	currentFileWriter *blockfileWriter
 	bcInfo            atomic.Value
+	watcherList       []blkstorage.BlockFileWatcher
 }
 
 /*
@@ -272,6 +273,7 @@ func (mgr *blockfileMgr) addBlock(block *common.Block) error {
 	//Determine if we need to start a new file since the size of this block
 	//exceeds the amount of space left in the current file
 	if currentOffset+totalBytesToAppend > mgr.conf.maxBlockfileSize {
+		mgr.Notify(mgr.cpInfo.latestFileChunkSuffixNum)
 		mgr.moveToNextFile()
 		currentOffset = 0
 	}
@@ -602,6 +604,18 @@ func (mgr *blockfileMgr) saveCurrentInfo(i *checkpointInfo, sync bool) error {
 		return err
 	}
 	return nil
+}
+
+func (mgr *blockfileMgr) Notify(suffixNum int) {
+	for _, w := range mgr.watcherList {
+		w.BlockFileFull(suffixNum)
+	}
+}
+
+func (mgr *blockfileMgr) RegistWatcher(watcher blkstorage.BlockFileWatcher) {
+	if watcher != nil {
+		mgr.watcherList = append(mgr.watcherList, watcher)
+	}
 }
 
 // scanForLastCompleteBlock scan a given block file and detects the last offset in the file

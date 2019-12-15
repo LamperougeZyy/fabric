@@ -191,11 +191,11 @@ func TestConfigUpdate(t *testing.T) {
 	assert.Nil(t, c.GetWriteSet())
 
 	c = &ConfigUpdate{
-		ChannelId: "ChannelId",
+		ChannelId: "channelId",
 		ReadSet:   &ConfigGroup{},
 		WriteSet:  &ConfigGroup{},
 	}
-	assert.Equal(t, "ChannelId", c.GetChannelId())
+	assert.Equal(t, "channelId", c.GetChannelId())
 	assert.NotNil(t, c.GetReadSet())
 	assert.NotNil(t, c.GetWriteSet())
 

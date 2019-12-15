@@ -602,7 +602,7 @@ type Header struct {
 	// Timestamp is the local time when the message was created
 	// by the sender
 	Timestamp *timestamp.Timestamp `protobuf:"bytes,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	// ChannelId identifies the channel this message is bound for
+	// channelId identifies the channel this message is bound for
 	ChannelId string `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
 	// Nonce is a sufficientley long random value
 	// used to ensure the request has enough entropy.

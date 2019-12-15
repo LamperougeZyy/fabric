@@ -10,6 +10,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/hyperledger/fabric/orderer/common/blockfetcher"
+	"github.com/hyperledger/fabric/orderer/common/blockfilewatcher"
+	"github.com/hyperledger/fabric/orderer/common/server/pub_sub_server"
+	"github.com/hyperledger/fabric/protos/pubsub"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -106,7 +110,8 @@ func Start(cmd string, conf *localconfig.TopLevel) {
 	defer opsSystem.Stop()
 	metricsProvider := opsSystem.Provider
 
-	lf, _ := createLedgerFactory(conf, metricsProvider)
+	lf, _ := createFileLedgerFactoryWithWatcher(conf, metricsProvider)
+	blockfetcher.InitializeBlockFetcherInstance(lf)
 	sysChanLastConfigBlock := extractSysChanLastConfig(lf, bootstrapBlock)
 	clusterBootBlock := selectClusterBootBlock(bootstrapBlock, sysChanLastConfigBlock)
 
@@ -120,6 +125,7 @@ func Start(cmd string, conf *localconfig.TopLevel) {
 
 	r := createReplicator(lf, bootstrapBlock, conf, clusterClientConfig.SecOpts, signer)
 	// Only clusters that are equipped with a recent config block can replicate.
+	// zyy: 只有在etcd这个共识下才会考虑replicate的问题
 	if clusterType && conf.General.GenesisMethod == "file" {
 		r.replicateIfNeeded(bootstrapBlock)
 	}
@@ -196,12 +202,14 @@ func Start(cmd string, conf *localconfig.TopLevel) {
 
 	initializeProfilingService(conf)
 	ab.RegisterAtomicBroadcastServer(grpcServer.Server(), server)
+	psServer := pub_sub_server.NewPubsubService()
+	pubsub.RegisterPubSubServiceServer(grpcServer.Server(), psServer)
 	logger.Info("Beginning to serve requests")
 	grpcServer.Start()
 }
 
 // Extract system channel last config block
-func extractSysChanLastConfig(lf blockledger.Factory, bootstrapBlock *cb.Block) *cb.Block {
+func extractSysChanLastConfig(lf blockledger.FactoryWithWatcher, bootstrapBlock *cb.Block) *cb.Block {
 	// Are we bootstrapping?
 	chainCount := len(lf.ChainIDs())
 	if chainCount == 0 {
@@ -214,7 +222,8 @@ func extractSysChanLastConfig(lf blockledger.Factory, bootstrapBlock *cb.Block) 
 	if err != nil {
 		logger.Panicf("Failed extracting system channel name from bootstrap block: %v", err)
 	}
-	systemChannelLedger, err := lf.GetOrCreate(systemChannelName)
+	watcher := blockfilewatcher.NewOrdererBlockFileWatcher(systemChannelName)
+	systemChannelLedger, err := lf.GetOrCreateWithWatcher(systemChannelName, watcher)
 	if err != nil {
 		logger.Panicf("Failed getting system channel ledger: %v", err)
 	}
@@ -244,7 +253,7 @@ func selectClusterBootBlock(bootstrapBlock, sysChanLastConfig *cb.Block) *cb.Blo
 }
 
 func createReplicator(
-	lf blockledger.Factory,
+	lf blockledger.FactoryWithWatcher,
 	bootstrapBlock *cb.Block,
 	conf *localconfig.TopLevel,
 	secOpts *comm.SecureOptions,
@@ -279,8 +288,8 @@ func createReplicator(
 	}
 
 	ledgerFactory := &ledgerFactory{
-		Factory:       lf,
-		onBlockCommit: vr.BlockCommitted,
+		FactoryWithWatcher: lf,
+		onBlockCommit:      vr.BlockCommitted,
 	}
 	return &replicationInitiator{
 		registerChain:     vr.RegisterVerifier,
@@ -553,12 +562,13 @@ func extractBootstrapBlock(conf *localconfig.TopLevel) *cb.Block {
 	return bootstrapBlock
 }
 
-func initializeBootstrapChannel(genesisBlock *cb.Block, lf blockledger.Factory) {
+func initializeBootstrapChannel(genesisBlock *cb.Block, lf blockledger.FactoryWithWatcher) {
 	chainID, err := utils.GetChainIDFromBlock(genesisBlock)
 	if err != nil {
 		logger.Fatal("Failed to parse channel ID from genesis block:", err)
 	}
-	gl, err := lf.GetOrCreate(chainID)
+	watcher := blockfilewatcher.NewOrdererBlockFileWatcher(chainID)
+	gl, err := lf.GetOrCreateWithWatcher(chainID, watcher)
 	if err != nil {
 		logger.Fatal("Failed to create the system channel:", err)
 	}
@@ -632,7 +642,7 @@ func initializeMultichannelRegistrar(
 	signer crypto.LocalSigner,
 	metricsProvider metrics.Provider,
 	healthChecker healthChecker,
-	lf blockledger.Factory,
+	lf blockledger.FactoryWithWatcher,
 	callbacks ...channelconfig.BundleActor,
 ) *multichannel.Registrar {
 	genesisBlock := extractBootstrapBlock(conf)
@@ -663,7 +673,7 @@ func initializeMultichannelRegistrar(
 func initializeEtcdraftConsenter(
 	consenters map[string]consensus.Consenter,
 	conf *localconfig.TopLevel,
-	lf blockledger.Factory,
+	lf blockledger.FactoryWithWatcher,
 	clusterDialer *cluster.PredicateDialer,
 	bootstrapBlock *cb.Block,
 	ri *replicationInitiator,
@@ -681,7 +691,8 @@ func initializeEtcdraftConsenter(
 	if err != nil {
 		ri.logger.Panicf("Failed extracting system channel name from bootstrap block: %v", err)
 	}
-	systemLedger, err := lf.GetOrCreate(systemChannelName)
+	watcher := blockfilewatcher.NewOrdererBlockFileWatcher(systemChannelName)
+	systemLedger, err := lf.GetOrCreateWithWatcher(systemChannelName, watcher)
 	if err != nil {
 		ri.logger.Panicf("Failed obtaining system channel (%s) ledger: %v", systemChannelName, err)
 	}

@@ -51,6 +51,21 @@ func createLedgerFactory(conf *config.TopLevel, metricsProvider metrics.Provider
 	return lf, ld
 }
 
+func createFileLedgerFactoryWithWatcher(conf *config.TopLevel, metricsProvider metrics.Provider) (blockledger.FactoryWithWatcher, string) {
+	var lf blockledger.FactoryWithWatcher
+	var ld string
+	if conf.General.LedgerType == "file" {
+		ld = conf.FileLedger.Location
+		if ld == "" {
+			ld = createTempDir(conf.FileLedger.Prefix)
+		}
+		logger.Debug("Ledger dir:", ld)
+		lf = fileledger.NewWithWathcer(ld, metricsProvider)
+	}
+
+	return lf, ld
+}
+
 func createTempDir(dirPrefix string) string {
 	dirPath, err := ioutil.TempDir("", dirPrefix)
 	if err != nil {

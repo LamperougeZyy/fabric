@@ -47,6 +47,19 @@ func newFsBlockStore(id string, conf *Conf, indexConfig *blkstorage.IndexConfig,
 	return &fsBlockStore{id, conf, fileMgr, ledgerStats}
 }
 
+func newFsBlockStoreWithWatcher(id string, conf *Conf, indexConfig *blkstorage.IndexConfig,
+	dbHandle *leveldbhelper.DBHandle, stats *stats, watcher blkstorage.BlockFileWatcher) *fsBlockStore {
+	fileMgr := newBlockfileMgr(id, conf, indexConfig, dbHandle)
+	fileMgr.RegistWatcher(watcher)
+
+	// create ledgerStats and initialize blockchain_height stat
+	ledgerStats := stats.ledgerStats(id)
+	info := fileMgr.getBlockchainInfo()
+	ledgerStats.updateBlockchainHeight(info.Height)
+
+	return &fsBlockStore{id, conf, fileMgr, ledgerStats}
+}
+
 // AddBlock adds a new block
 func (store *fsBlockStore) AddBlock(block *common.Block) error {
 	// track elapsed time to collect block commit time

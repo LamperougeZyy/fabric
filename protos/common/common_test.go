@@ -138,12 +138,12 @@ func TestCommonStructs(t *testing.T) {
 	assert.Nil(t, chheader.GetExtension())
 	assert.Nil(t, chheader.GetTimestamp())
 	chheader = &ChannelHeader{
-		ChannelId: "ChannelId",
+		ChannelId: "channelId",
 		TxId:      "TxId",
 		Timestamp: &google_protobuf.Timestamp{},
 		Extension: []byte{},
 	}
-	assert.Equal(t, "ChannelId", chheader.GetChannelId())
+	assert.Equal(t, "channelId", chheader.GetChannelId())
 	assert.Equal(t, "TxId", chheader.GetTxId())
 	assert.Equal(t, uint64(0), chheader.GetEpoch())
 	assert.Equal(t, int32(0), chheader.GetType())

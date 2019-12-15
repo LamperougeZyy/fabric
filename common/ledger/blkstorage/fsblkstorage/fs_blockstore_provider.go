@@ -39,6 +39,13 @@ func NewProvider(conf *Conf, indexConfig *blkstorage.IndexConfig, metricsProvide
 	return &FsBlockstoreProvider{conf, indexConfig, p, stats}
 }
 
+func NewProviderWithWatcher(conf *Conf, indexConfig *blkstorage.IndexConfig, metricsProvider metrics.Provider) blkstorage.BlockStoreProviderWithWatcher {
+	p := leveldbhelper.NewProvider(&leveldbhelper.Conf{DBPath: conf.getIndexDir()})
+	// create stats instance at provider level and pass to newFsBlockStore
+	stats := newStats(metricsProvider)
+	return &FsBlockstoreProvider{conf, indexConfig, p, stats}
+}
+
 // CreateBlockStore simply calls OpenBlockStore
 func (p *FsBlockstoreProvider) CreateBlockStore(ledgerid string) (blkstorage.BlockStore, error) {
 	return p.OpenBlockStore(ledgerid)
@@ -66,4 +73,9 @@ func (p *FsBlockstoreProvider) List() ([]string, error) {
 // Close closes the FsBlockstoreProvider
 func (p *FsBlockstoreProvider) Close() {
 	p.leveldbProvider.Close()
+}
+
+func (p *FsBlockstoreProvider) OpenBlockStoreWithWatcher(ledgerid string, watcher blkstorage.BlockFileWatcher) (blkstorage.BlockStore, error) {
+	indexStoreHandle := p.leveldbProvider.GetDBHandle(ledgerid)
+	return newFsBlockStoreWithWatcher(ledgerid, p.conf, p.indexConfig, indexStoreHandle, p.stats, watcher), nil
 }

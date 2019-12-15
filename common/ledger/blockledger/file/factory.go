@@ -78,3 +78,69 @@ func New(directory string, metricsProvider metrics.Provider) blockledger.Factory
 		ledgers: make(map[string]blockledger.ReadWriter),
 	}
 }
+
+// zyy 创建带监听者的账本文件工厂
+type fileLedgerFactoryWithWatcher struct {
+	blkstorageProviderWithWatcher blkstorage.BlockStoreProviderWithWatcher
+	ledgers                       map[string]blockledger.ReadWriter
+	watchers                      map[string]blkstorage.BlockFileWatcher
+	mutex                         sync.Mutex
+}
+
+func (flfw *fileLedgerFactoryWithWatcher) GetOrCreate(chainID string) (blockledger.ReadWriter, error) {
+	return flfw.GetOrCreateWithWatcher(chainID, nil)
+}
+
+func (flfw *fileLedgerFactoryWithWatcher) ChainIDs() []string {
+	chainIDs, err := flfw.blkstorageProviderWithWatcher.List()
+	if err != nil {
+		logger.Panic(err)
+	}
+	return chainIDs
+}
+
+func (flfw *fileLedgerFactoryWithWatcher) Close() {
+	flfw.blkstorageProviderWithWatcher.Close()
+}
+
+func NewWithWathcer(directory string, metricsProvider metrics.Provider) blockledger.FactoryWithWatcher {
+	return &fileLedgerFactoryWithWatcher{
+		ledgers: make(map[string]blockledger.ReadWriter),
+		blkstorageProviderWithWatcher: fsblkstorage.NewProviderWithWatcher(
+			fsblkstorage.NewConf(directory, -1),
+			&blkstorage.IndexConfig{
+				AttrsToIndex: []blkstorage.IndexableAttr{blkstorage.IndexableAttrBlockNum}},
+			metricsProvider,
+		),
+	}
+}
+
+func (flfw *fileLedgerFactoryWithWatcher) GetOrCreateWithWatcher(chainID string, watcher blkstorage.BlockFileWatcher) (blockledger.ReadWriter, error) {
+	flfw.mutex.Lock()
+	defer flfw.mutex.Unlock()
+
+	var blockStore blkstorage.BlockStore
+	var err error
+	key := chainID
+	// check cache
+	ledger, ok := flfw.ledgers[key]
+	if ok {
+		return ledger, nil
+	}
+	_, ok = flfw.watchers[key]
+	if ok {
+		// open fresh
+		blockStore, err = flfw.blkstorageProviderWithWatcher.OpenBlockStoreWithWatcher(key, nil)
+	} else {
+		// open fresh
+		blockStore, err = flfw.blkstorageProviderWithWatcher.OpenBlockStoreWithWatcher(key, watcher)
+	}
+	if err != nil {
+		return nil, err
+	}
+	ledger = NewFileLedger(blockStore)
+	flfw.ledgers[key] = ledger
+	flfw.watchers[key] = watcher
+
+	return ledger, nil
+}
