@@ -204,6 +204,7 @@ func Start(cmd string, conf *localconfig.TopLevel) {
 	ab.RegisterAtomicBroadcastServer(grpcServer.Server(), server)
 	psServer := pub_sub_server.NewPubsubService()
 	pubsub.RegisterPubSubServiceServer(grpcServer.Server(), psServer)
+	blockfilewatcher.InitPublisClient(grpcServer.Address())
 	logger.Info("Beginning to serve requests")
 	grpcServer.Start()
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/hyperledger/fabric/common/ledger/blockledger"
 	"github.com/hyperledger/fabric/orderer/common/blockfetcher"
 	"github.com/hyperledger/fabric/protos/pubsub"
+	"google.golang.org/grpc"
 	"sort"
 )
 
@@ -59,4 +60,14 @@ func (bfw *OrdererBlockFileWatcher) BlockFileFull(suffixNum int) {
 	if err != nil {
 		logger.Fatalf("Publish distribute list error! %s", err.Error())
 	}
+}
+
+func InitPublisClient(address string) {
+	logger.Infof("Get peer server address: %s", address)
+	conn, err := grpc.Dial(address, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+
+	publishClient = pubsub.NewPubSubServiceClient(conn)
 }

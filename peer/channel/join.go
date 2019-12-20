@@ -20,7 +20,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
+	"google.golang.org/grpc"
 	"io/ioutil"
+	"strings"
 
 	"github.com/hyperledger/fabric/core/scc/cscc"
 	"github.com/hyperledger/fabric/peer/common"
@@ -73,6 +76,9 @@ func getJoinCCSpec() (*pb.ChaincodeSpec, error) {
 	if err != nil {
 		return nil, GBFileNotFoundErr(err.Error())
 	}
+
+	notifySubscribeServer(genesisBlockPath)
+
 	// Build the spec
 	input := &pb.ChaincodeInput{Args: [][]byte{[]byte(cscc.JoinChain), gb}}
 
@@ -83,6 +89,28 @@ func getJoinCCSpec() (*pb.ChaincodeSpec, error) {
 	}
 
 	return spec, nil
+}
+
+func notifySubscribeServer(genesisBlockPath string) {
+	fileNames := strings.Split(genesisBlockPath, "/")
+	channelId := strings.Split(fileNames[len(fileNames)-1], ".")[0]
+
+	listenAddr := viper.GetString("peer.listenAddress")
+	conn, err := grpc.Dial(listenAddr)
+	if err != nil {
+		logger.Warn("Dial peer server error!")
+	}
+
+	ordererEndpoint := viper.GetString("orderer.address")
+
+	notifyReq := &pb.SubscribeRequest{ChannelId: channelId, OrdererEndPoint: ordererEndpoint}
+	client := pb.NewSubscribeServiceClient(conn)
+	resp, err := client.NotifySubscriber(context.Background(), notifyReq)
+	if err != nil {
+		logger.Warnf("Notify peer subscribe service fail: %s", err.Error())
+	} else {
+		logger.Infof("Notify peer subscribe service success: %s", resp.GetMsg())
+	}
 }
 
 func executeJoin(cf *ChannelCmdFactory) (err error) {

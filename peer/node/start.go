@@ -9,6 +9,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"github.com/hyperledger/fabric/peer/common"
 	"net"
 	"net/http"
 	"os"
@@ -286,6 +287,7 @@ func serve(args []string) error {
 		logger.Panicf("Failed serializing self identity: %v", err)
 	}
 
+	// zyy: 这里分别载入了四种类型的插件，包括authFilters,decorators,endorsers,validators这四种，插件可以自己定义，官方默认的插件在core/handlers/library/library.go中，如果我们要自己定义插件也要写道这个文件中
 	libConf := library.Config{}
 	if err = viperutil.EnhancedExactUnmarshalKey("peer.handlers", &libConf); err != nil {
 		return errors.WithMessage(err, "could not load YAML config")
@@ -428,6 +430,10 @@ func serve(args []string) error {
 	auth := authHandler.ChainFilters(serverEndorser, authFilters...)
 	// Register the Endorser server
 	pb.RegisterEndorserServer(peerServer.Server(), auth)
+
+	// zyy: 注册订阅服务
+	subScribeService := common.NewSubscribeServiceServer()
+	pb.RegisterSubscribeServiceServer(peerServer.Server(), subScribeService)
 
 	go func() {
 		var grpcErr error
