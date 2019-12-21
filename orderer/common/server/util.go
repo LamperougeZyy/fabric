@@ -61,6 +61,7 @@ func createFileLedgerFactoryWithWatcher(conf *config.TopLevel, metricsProvider m
 		}
 		logger.Debug("Ledger dir:", ld)
 		lf = fileledger.NewWithWathcer(ld, metricsProvider)
+		createSubDir(ld, fsblkstorage.ChainsDir)
 	}
 
 	return lf, ld
