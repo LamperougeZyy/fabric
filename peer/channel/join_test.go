@@ -30,8 +30,8 @@ import (
 )
 
 func TestNotifySubscribeServer(t *testing.T) {
-	viper.Set("peer.listenAddress", "localhost:7051")
-	viper.Set("orderer.address", "localhost:7050")
+	viper.Set("peer.address", "peer0.org1.example.com:7051")
+	viper.Set("orderer.address", "orderer.example.com:7050")
 	notifySubscribeServer("./mychannel.block")
 }
 

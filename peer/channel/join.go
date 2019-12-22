@@ -95,7 +95,7 @@ func notifySubscribeServer(genesisBlockPath string) {
 	fileNames := strings.Split(genesisBlockPath, "/")
 	channelId := strings.Split(fileNames[len(fileNames)-1], ".")[0]
 
-	listenAddr := viper.GetString("peer.listenAddress")
+	listenAddr := viper.GetString("peer.address")
 	conn, err := grpc.Dial(listenAddr, grpc.WithInsecure())
 	if err != nil {
 		logger.Warnf("Dial peer server error! %+v", err)
@@ -104,6 +104,7 @@ func notifySubscribeServer(genesisBlockPath string) {
 
 	ordererEndpoint := viper.GetString("orderer.address")
 
+	logger.Debugf("orderer endpoint: %s, peer endpoint: %s", ordererEndpoint, listenAddr)
 	notifyReq := &pb.SubscribeRequest{ChannelId: channelId, OrdererEndPoint: ordererEndpoint}
 	client := pb.NewSubscribeServiceClient(conn)
 	resp, err := client.NotifySubscriber(context.Background(), notifyReq)
