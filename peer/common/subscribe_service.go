@@ -12,7 +12,7 @@ type SubscribeServiceServer struct {
 
 func (s *SubscribeServiceServer) NotifySubscriber(ctx context.Context, req *peer.SubscribeRequest) (*peer.SubscribeResponse, error) {
 	logger.Infof("Get subscriber create info: %+v", req)
-	conn, err := grpc.Dial(req.OrdererEndPoint)
+	conn, err := grpc.Dial(req.OrdererEndPoint, grpc.WithInsecure())
 	if err != nil {
 		logger.Errorf("Dail order pubsub server failed! %s", err.Error())
 		return nil, err
