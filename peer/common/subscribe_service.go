@@ -27,8 +27,12 @@ func (s *SubscribeServiceServer) NotifySubscriber(ctx context.Context, req *peer
 	// zyy: 开一个新的协程持续获取来自pubsub server的消息
 	go func() {
 		for {
-			distributeList, _ := stream.Recv()
-			logger.Debugf("Oh Yeah! First Stage Complete! Get distribute list: %+v", distributeList)
+			distributeList, err := stream.Recv()
+			if err != nil {
+				logger.Warnf("Stream receive distribute error: %s", err.Error())
+			} else {
+				logger.Debugf("Oh Yeah! First Stage Complete! Get distribute list: %+v", distributeList)
+			}
 		}
 	}()
 

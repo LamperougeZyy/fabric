@@ -39,6 +39,8 @@ func (p *PubSubServer) Subscribe(channelId *protos_pubsub.String, stream protos_
 	for v := range ch {
 		if err := stream.Send(v.(*protos_pubsub.DistributeList)); err != nil {
 			return err
+		} else {
+			logger.Debugf("Send distribute list success!")
 		}
 	}
 

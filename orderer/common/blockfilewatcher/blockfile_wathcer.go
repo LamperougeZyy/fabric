@@ -50,7 +50,8 @@ func (bfw *OrdererBlockFileWatcher) BlockFileFull(suffixNum int) {
 	list := make(map[string]string)
 	for i := 0; i < ParShards+DataShards; i++ {
 		orgName := orgNameList[i%len(orgNameList)]
-		list[orgName] = fmt.Sprintf("%s_%06d_%d", bfw.channelId, suffixNum, i)
+		fileBlock := fmt.Sprintf("%s_%06d_%d", bfw.channelId, suffixNum, i)
+		list[fileBlock] = orgName
 	}
 
 	distributeList.Item = list
