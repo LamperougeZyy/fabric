@@ -11,6 +11,7 @@ type SubscribeServiceServer struct {
 }
 
 func (s *SubscribeServiceServer) NotifySubscriber(ctx context.Context, req *peer.SubscribeRequest) (*peer.SubscribeResponse, error) {
+	logger.Infof("Get subscriber create info: %+v", req)
 	conn, err := grpc.Dial(req.OrdererEndPoint)
 	if err != nil {
 		logger.Errorf("Dail order pubsub server failed! %s", err.Error())
@@ -23,7 +24,7 @@ func (s *SubscribeServiceServer) NotifySubscriber(ctx context.Context, req *peer
 	go func() {
 		for {
 			distributeList, _ := stream.Recv()
-			logger.Infof("Oh Yeah! First Stage Complete! Get distribute list: %+v", distributeList)
+			logger.Debugf("Oh Yeah! First Stage Complete! Get distribute list: %+v", distributeList)
 		}
 	}()
 

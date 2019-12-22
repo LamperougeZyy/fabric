@@ -24,8 +24,8 @@ const (
 	// IndexDir is the name of the directory containing all block indexes across ledgers.
 	IndexDir = "index"
 
-	// 对每个文件的最大容量进行修改，改成每个文件1kb，方便测试
-	defaultMaxBlockfileSize = 1024 // bytes
+	// 对每个文件的最大容量进行修改，改成每个文件1mb，方便测试
+	defaultMaxBlockfileSize = 1024 * 1024 // bytes
 )
 
 // Conf encapsulates all the configurations for `FsBlockStore`

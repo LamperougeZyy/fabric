@@ -105,7 +105,8 @@ func (flfw *fileLedgerFactoryWithWatcher) Close() {
 
 func NewWithWathcer(directory string, metricsProvider metrics.Provider) blockledger.FactoryWithWatcher {
 	return &fileLedgerFactoryWithWatcher{
-		ledgers: make(map[string]blockledger.ReadWriter),
+		ledgers:  make(map[string]blockledger.ReadWriter),
+		watchers: make(map[string]blkstorage.BlockFileWatcher),
 		blkstorageProviderWithWatcher: fsblkstorage.NewProviderWithWatcher(
 			fsblkstorage.NewConf(directory, -1),
 			&blkstorage.IndexConfig{

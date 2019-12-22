@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/hyperledger/fabric/common/flogging"
-	"github.com/hyperledger/fabric/common/ledger/blockledger"
 	"github.com/hyperledger/fabric/orderer/common/blockfetcher"
 	"github.com/hyperledger/fabric/protos/pubsub"
 	"google.golang.org/grpc"
@@ -14,13 +13,12 @@ import (
 var (
 	logger        = flogging.MustGetLogger("orderer.common.blockfilewatcher")
 	publishClient pubsub.PubSubServiceClient
-	DataShards    int
-	ParShards     int
+	DataShards    = 3
+	ParShards     = 3
 )
 
 type OrdererBlockFileWatcher struct {
-	channelId     string
-	blkFileLedger blockledger.Reader
+	channelId string
 }
 
 func NewOrdererBlockFileWatcher(channelId string) *OrdererBlockFileWatcher {
@@ -56,14 +54,15 @@ func (bfw *OrdererBlockFileWatcher) BlockFileFull(suffixNum int) {
 	}
 
 	distributeList.Item = list
+	logger.Debugf("Create a new distribute lis: %+v", distributeList)
 	_, err = publishClient.Publish(context.Background(), distributeList)
 	if err != nil {
 		logger.Fatalf("Publish distribute list error! %s", err.Error())
 	}
 }
 
-func InitPublisClient(address string) {
-	logger.Infof("Get peer server address: %s", address)
+func InitPublishClient(address string) {
+	logger.Infof("Get orderer address: %s", address)
 	conn, err := grpc.Dial(address, grpc.WithInsecure())
 	if err != nil {
 		panic(err)

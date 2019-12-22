@@ -607,12 +607,14 @@ func (mgr *blockfileMgr) saveCurrentInfo(i *checkpointInfo, sync bool) error {
 }
 
 func (mgr *blockfileMgr) Notify(suffixNum int) {
+	logger.Debug(fmt.Sprintf("block file %06d is full", suffixNum))
 	for _, w := range mgr.watcherList {
 		w.BlockFileFull(suffixNum)
 	}
 }
 
 func (mgr *blockfileMgr) RegistWatcher(watcher blkstorage.BlockFileWatcher) {
+	logger.Debug(fmt.Sprintf("registe a watcher: %+v", watcher))
 	if watcher != nil {
 		mgr.watcherList = append(mgr.watcherList, watcher)
 	}

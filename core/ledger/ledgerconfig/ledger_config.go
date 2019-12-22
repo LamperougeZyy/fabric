@@ -91,7 +91,7 @@ func GetConfigHistoryPath() string {
 
 // GetMaxBlockfileSize returns maximum size of the block file
 func GetMaxBlockfileSize() int {
-	return 64 * 1024 * 1024
+	return 1024 * 1024
 }
 
 // GetTotalQueryLimit exposes the totalLimit variable
