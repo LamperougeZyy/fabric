@@ -88,7 +88,8 @@ func (provider *Provider) Initialize(initializer *ledger.Initializer) error {
 	stateListeners = append(stateListeners, configHistoryMgr)
 
 	provider.initializer = initializer
-	provider.ledgerStoreProvider = ledgerstorage.NewProvider(initializer.MetricsProvider)
+	//provider.ledgerStoreProvider = ledgerstorage.NewProvider(initializer.MetricsProvider)
+	provider.ledgerStoreProvider = ledgerstorage.NewProviderWithWatcher(initializer.MetricsProvider)
 	provider.configHistoryMgr = configHistoryMgr
 	provider.stateListeners = stateListeners
 	provider.collElgNotifier = collElgNotifier

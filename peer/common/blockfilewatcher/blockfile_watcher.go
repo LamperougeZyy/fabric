@@ -11,6 +11,10 @@ type PeerBlockFileWatcher struct {
 	ChannelId string
 }
 
+func init() {
+	signals = make(map[string]chan int)
+}
+
 func (bfpw *PeerBlockFileWatcher) BlockFileFull(suffixNum int) {
 	go func() {
 		rwLock.Lock()

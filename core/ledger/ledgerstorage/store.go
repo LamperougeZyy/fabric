@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package ledgerstorage
 
 import (
-	pcommon "github.com/hyperledger/fabric/peer/common"
 	"github.com/hyperledger/fabric/peer/common/blockfilewatcher"
 	"sync"
 	"sync/atomic"
@@ -59,6 +58,17 @@ func NewProvider(metricsProvider metrics.Provider) *Provider {
 		fsblkstorage.NewConf(ledgerconfig.GetBlockStorePath(), ledgerconfig.GetMaxBlockfileSize()),
 		indexConfig,
 		metricsProvider)
+
+	pvtStoreProvider := pvtdatastorage.NewProvider()
+	return &Provider{
+		blkStoreProvider:     blockStoreProvider,
+		pvtdataStoreProvider: pvtStoreProvider,
+	}
+}
+
+func NewProviderWithWatcher(metricsProvider metrics.Provider) *Provider {
+	// Initialize the block storage
+	indexConfig := &blkstorage.IndexConfig{AttrsToIndex: attrsToIndex}
 	blockStoreProviderWithWatcher := fsblkstorage.NewProviderWithWatcher(
 		fsblkstorage.NewConf(ledgerconfig.GetBlockStorePath(), ledgerconfig.GetMaxBlockfileSize()),
 		indexConfig,
@@ -66,7 +76,7 @@ func NewProvider(metricsProvider metrics.Provider) *Provider {
 
 	pvtStoreProvider := pvtdatastorage.NewProvider()
 	return &Provider{
-		blkStoreProvider:            blockStoreProvider,
+		blkStoreProvider:            blockStoreProviderWithWatcher,
 		blkStoreProviderWithWathcer: blockStoreProviderWithWatcher,
 		watchers:                    make(map[string]blkstorage.BlockFileWatcher),
 		pvtdataStoreProvider:        pvtStoreProvider,

@@ -9,11 +9,13 @@ package node
 import (
 	"context"
 	"fmt"
+	"github.com/hyperledger/fabric/core/ledger/ledgerconfig"
 	"github.com/hyperledger/fabric/peer/common"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
@@ -432,7 +434,7 @@ func serve(args []string) error {
 	pb.RegisterEndorserServer(peerServer.Server(), auth)
 
 	// zyy: 注册订阅服务
-	subScribeService := common.NewSubscribeServiceServer(viper.GetString("peer.localMspId"))
+	subScribeService := common.NewSubscribeServiceServer(viper.GetString("peer.localMspId"), filepath.Join(ledgerconfig.GetBlockStorePath(), "chains"))
 	pb.RegisterSubscribeServiceServer(peerServer.Server(), subScribeService)
 
 	go func() {

@@ -3,7 +3,6 @@ package common
 import (
 	"context"
 	"fmt"
-	"github.com/hyperledger/fabric/core/ledger/ledgerconfig"
 	"github.com/hyperledger/fabric/peer/common/blockfilewatcher"
 	"github.com/hyperledger/fabric/protos/peer"
 	"github.com/hyperledger/fabric/protos/pubsub"
@@ -17,7 +16,8 @@ import (
 )
 
 type SubscribeServiceServer struct {
-	mspId string
+	mspId          string
+	blockStorePath string
 }
 
 func (s *SubscribeServiceServer) NotifySubscriber(ctx context.Context, req *peer.SubscribeRequest) (*peer.SubscribeResponse, error) {
@@ -44,7 +44,7 @@ func (s *SubscribeServiceServer) NotifySubscriber(ctx context.Context, req *peer
 				signal := blockfilewatcher.GetBlockFileSignal(distributeList.ChannelId)
 				suffixNum := <-signal
 				if fmt.Sprintf("%06d", suffixNum) == distributeList.FileSuffix {
-					err := encodeBlockfile(suffixNum, distributeList, s.mspId)
+					err := encodeBlockfile(suffixNum, distributeList, s.mspId, s.blockStorePath)
 					if err != nil {
 						logger.Errorf("Split block file fail! %s", err.Error())
 					}
@@ -60,9 +60,8 @@ func (s *SubscribeServiceServer) NotifySubscriber(ctx context.Context, req *peer
 	}, nil
 }
 
-func encodeBlockfile(suffixNum int, distributeList *pubsub.DistributeList, mspId string) error {
-	blockFilePath := filepath.Join(ledgerconfig.GetBlockStorePath(), "chains", distributeList.ChannelId)
-	blockFile := filepath.Join(blockFilePath, fmt.Sprintf("blockfile_%06d", suffixNum))
+func encodeBlockfile(suffixNum int, distributeList *pubsub.DistributeList, mspId string, blockStorePath string) error {
+	blockFile := filepath.Join(blockStorePath, distributeList.ChannelId, fmt.Sprintf("blockfile_%06d", suffixNum))
 	logger.Debugf("Get block file path: %s", blockFile)
 	bfile, err := ioutil.ReadFile(blockFile)
 	if err != nil {
@@ -91,7 +90,7 @@ func encodeBlockfile(suffixNum int, distributeList *pubsub.DistributeList, mspId
 	}
 
 	for _, v := range fileBlockList {
-		fileBlockPath := filepath.Join(blockFilePath, fmt.Sprintf("%s_%06d_%d", distributeList.ChannelId, suffixNum, v))
+		fileBlockPath := filepath.Join(blockStorePath, distributeList.ChannelId, fmt.Sprintf("%s_%06d_%d", distributeList.ChannelId, suffixNum, v))
 		f, err := os.Create(fileBlockPath)
 		if err != nil {
 			return err
@@ -107,8 +106,9 @@ func encodeBlockfile(suffixNum int, distributeList *pubsub.DistributeList, mspId
 	return nil
 }
 
-func NewSubscribeServiceServer(mspId string) *SubscribeServiceServer {
+func NewSubscribeServiceServer(mspId string, path string) *SubscribeServiceServer {
 	return &SubscribeServiceServer{
-		mspId: mspId,
+		mspId:          mspId,
+		blockStorePath: path,
 	}
 }
