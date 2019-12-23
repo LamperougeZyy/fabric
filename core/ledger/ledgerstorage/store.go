@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package ledgerstorage
 
 import (
+	pcommon "github.com/hyperledger/fabric/peer/common"
+	"github.com/hyperledger/fabric/peer/common/blockfilewatcher"
 	"sync"
 	"sync/atomic"
 
@@ -25,8 +27,10 @@ var logger = flogging.MustGetLogger("ledgerstorage")
 
 // Provider encapusaltes two providers 1) block store provider and 2) and pvt data store provider
 type Provider struct {
-	blkStoreProvider     blkstorage.BlockStoreProvider
-	pvtdataStoreProvider pvtdatastorage.Provider
+	blkStoreProvider            blkstorage.BlockStoreProvider
+	blkStoreProviderWithWathcer blkstorage.BlockStoreProviderWithWatcher
+	watchers                    map[string]blkstorage.BlockFileWatcher
+	pvtdataStoreProvider        pvtdatastorage.Provider
 }
 
 // Store encapsulates two stores 1) block store and pvt data store
@@ -55,9 +59,18 @@ func NewProvider(metricsProvider metrics.Provider) *Provider {
 		fsblkstorage.NewConf(ledgerconfig.GetBlockStorePath(), ledgerconfig.GetMaxBlockfileSize()),
 		indexConfig,
 		metricsProvider)
+	blockStoreProviderWithWatcher := fsblkstorage.NewProviderWithWatcher(
+		fsblkstorage.NewConf(ledgerconfig.GetBlockStorePath(), ledgerconfig.GetMaxBlockfileSize()),
+		indexConfig,
+		metricsProvider)
 
 	pvtStoreProvider := pvtdatastorage.NewProvider()
-	return &Provider{blockStoreProvider, pvtStoreProvider}
+	return &Provider{
+		blkStoreProvider:            blockStoreProvider,
+		blkStoreProviderWithWathcer: blockStoreProviderWithWatcher,
+		watchers:                    make(map[string]blkstorage.BlockFileWatcher),
+		pvtdataStoreProvider:        pvtStoreProvider,
+	}
 }
 
 // Open opens the store
@@ -65,10 +78,20 @@ func (p *Provider) Open(ledgerid string) (*Store, error) {
 	var blockStore blkstorage.BlockStore
 	var pvtdataStore pvtdatastorage.Store
 	var err error
-
-	if blockStore, err = p.blkStoreProvider.OpenBlockStore(ledgerid); err != nil {
-		return nil, err
+	if _, ok := p.watchers[ledgerid]; ok {
+		if blockStore, err = p.blkStoreProvider.OpenBlockStore(ledgerid); err != nil {
+			return nil, err
+		}
+	} else {
+		// zyy 创建一个watcher
+		watcher := blockfilewatcher.NewPeerBlockFileWatcher(ledgerid)
+		if blockStore, err = p.blkStoreProviderWithWathcer.OpenBlockStoreWithWatcher(ledgerid, watcher); err != nil {
+			return nil, err
+		}
+		p.watchers[ledgerid] = watcher
 	}
+
+	// zyy: 这个pvtdataStore就是在leveldb中存数据
 	if pvtdataStore, err = p.pvtdataStoreProvider.OpenStore(ledgerid); err != nil {
 		return nil, err
 	}

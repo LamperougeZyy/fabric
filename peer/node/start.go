@@ -432,7 +432,7 @@ func serve(args []string) error {
 	pb.RegisterEndorserServer(peerServer.Server(), auth)
 
 	// zyy: 注册订阅服务
-	subScribeService := common.NewSubscribeServiceServer()
+	subScribeService := common.NewSubscribeServiceServer(viper.GetString("peer.localMspId"))
 	pb.RegisterSubscribeServiceServer(peerServer.Server(), subScribeService)
 
 	go func() {

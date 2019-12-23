@@ -367,6 +367,22 @@
   version = "v1.0"
 
 [[projects]]
+  digest = "1:ff2f8988b610ebb6c350a4212d94d7a41231bd27c59e3234d206ed3e1e55beeb"
+  name = "github.com/klauspost/cpuid"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "5a626f7029c910cc8329dae5405ee4f65034bce5"
+  version = "v1.2.2"
+
+[[projects]]
+  digest = "1:edfd0260c2e3693121535e584229fbd9af9dd8bce7c354838003e4cfa331370b"
+  name = "github.com/klauspost/reedsolomon"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "70d62797617ea2be6dc26d343d2bce4e2c4e8e34"
+  version = "v1.9.3"
+
+[[projects]]
   branch = "master"
   digest = "1:c8a452cc8dd4ef9f857570ce2be31ca257a0928bf3c2b08cd7e11972b985c6d7"
   name = "github.com/konsorten/go-windows-terminal-sequences"
@@ -980,6 +996,7 @@
     "github.com/hyperledger/fabric-amcl/amcl",
     "github.com/hyperledger/fabric-amcl/amcl/FP256BN",
     "github.com/hyperledger/fabric-lib-go/healthz",
+    "github.com/klauspost/reedsolomon",
     "github.com/kr/pretty",
     "github.com/miekg/pkcs11",
     "github.com/mitchellh/mapstructure",
