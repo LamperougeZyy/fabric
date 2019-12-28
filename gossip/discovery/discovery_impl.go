@@ -119,10 +119,15 @@ func NewDiscoveryService(self NetworkMember, comm CommService, crypt CryptoServi
 	d.validateSelfConfig()
 	d.msgStore = newAliveMsgStore(d)
 
+	// zyy: 负责周期性地发送自己的存活消息
 	go d.periodicalSendAlive()
+	// zyy: 负责周期性地检查alive列表，将没有更新过状态的pkid加入dead列表
 	go d.periodicalCheckAlive()
+	// zyy: 处理三类消息——alive消息，请求节点状态的消息，节点状态响应的消息
 	go d.handleMessages()
+	// zyy: 周期性地试探dead列表中的节点，观察他们是否alive，如果恢复，就发送membership request
 	go d.periodicalReconnectToDead()
+	// zyy: 处理事件,有三类——假定节点dead，某个节点改变了pki-id,收到了toDieChan消息
 	go d.handleEvents()
 
 	return d

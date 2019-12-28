@@ -1,20 +1,18 @@
 package blockfilewatcher
 
 import (
-	"context"
 	"fmt"
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/orderer/common/blockfetcher"
-	"github.com/hyperledger/fabric/protos/pubsub"
-	"google.golang.org/grpc"
+	distribute_list_server "github.com/hyperledger/fabric/orderer/common/server/list_distribute_server"
+	list_puller "github.com/hyperledger/fabric/protos/listpuller"
 	"sort"
 )
 
 var (
-	logger        = flogging.MustGetLogger("orderer.common.blockfilewatcher")
-	publishClient pubsub.PubSubServiceClient
-	DataShards    = 3
-	ParShards     = 3
+	logger     = flogging.MustGetLogger("orderer.common.blockfilewatcher")
+	DataShards = 3
+	ParShards  = 3
 )
 
 type OrdererBlockFileWatcher struct {
@@ -28,8 +26,8 @@ func NewOrdererBlockFileWatcher(channelId string) *OrdererBlockFileWatcher {
 }
 
 func (bfw *OrdererBlockFileWatcher) BlockFileFull(suffixNum int) {
-	blockfetcher := blockfetcher.GetBlockFetcherInstance()
-	distributeList := &pubsub.DistributeList{
+	blockFetcher := blockfetcher.GetBlockFetcherInstance()
+	distributeList := list_puller.DistributeList{
 		Algorithm:  "RS",
 		ChannelId:  bfw.channelId,
 		FileSuffix: fmt.Sprintf("%06d", suffixNum),
@@ -37,12 +35,12 @@ func (bfw *OrdererBlockFileWatcher) BlockFileFull(suffixNum int) {
 		ParShards:  int32(ParShards),
 	}
 
-	orgs, err := blockfetcher.GetAppGroups(bfw.channelId)
+	orgs, err := blockFetcher.GetAppGroups(bfw.channelId)
 	if err != nil {
 		logger.Fatalf("Watcher Get Org Information error! %s", err.Error())
 	}
 	orgNameList := make([]string, 0)
-	for orgName, _ := range orgs {
+	for orgName := range orgs {
 		orgNameList = append(orgNameList, orgName)
 	}
 	sort.Strings(orgNameList)
@@ -56,18 +54,7 @@ func (bfw *OrdererBlockFileWatcher) BlockFileFull(suffixNum int) {
 
 	distributeList.Item = list
 	logger.Debugf("Create a new distribute lis: %+v", distributeList)
-	_, err = publishClient.Publish(context.Background(), distributeList)
-	if err != nil {
-		logger.Fatalf("Publish distribute list error! %s", err.Error())
-	}
-}
 
-func InitPublishClient(address string) {
-	logger.Infof("Get orderer address: %s", address)
-	conn, err := grpc.Dial(address, grpc.WithInsecure())
-	if err != nil {
-		panic(err)
-	}
-
-	publishClient = pubsub.NewPubSubServiceClient(conn)
+	// 存储到list_distribute_server的缓存中
+	distribute_list_server.StoreDistributeList(distributeList.ChannelId, distributeList)
 }

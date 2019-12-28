@@ -857,6 +857,7 @@ func (g *gossipServiceImpl) newDiscoveryAdapter() *discoveryAdapter {
 			if g.conf.PropagateIterations == 0 {
 				return
 			}
+			// zyy: 将消息添加到emitter的发送buffer中，emitter会周期性地检查buffer，并将信息发送出去
 			g.emitter.Add(&emittedGossipMessage{
 				SignedGossipMessage: msg,
 				filter: func(_ common.PKIidType) bool {

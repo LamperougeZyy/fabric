@@ -455,6 +455,7 @@ func (s *GossipStateProviderImpl) handleStateRequest(msg proto.ReceivedMessage) 
 			Signature: connInfo.Auth.Signature,
 			Identity:  connInfo.Identity,
 		}
+		// todo: zyy 在这里加上对seqNum的判断，如果这个seqNum处于已经被编码的文件中，那么先对文件进行还原
 		block, pvtData, err := s.ledger.GetPvtDataAndBlockByNum(seqNum, peerAuthInfo)
 
 		if err != nil {

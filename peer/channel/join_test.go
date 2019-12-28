@@ -29,12 +29,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNotifySubscribeServer(t *testing.T) {
-	viper.Set("peer.address", "peer0.org1.example.com:7051")
-	viper.Set("orderer.address", "orderer.example.com:7050")
-	notifySubscribeServer("./mychannel.block")
-}
-
 func TestMissingBlockFile(t *testing.T) {
 	defer resetFlags()
 

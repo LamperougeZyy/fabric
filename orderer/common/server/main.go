@@ -12,8 +12,8 @@ import (
 	"fmt"
 	"github.com/hyperledger/fabric/orderer/common/blockfetcher"
 	"github.com/hyperledger/fabric/orderer/common/blockfilewatcher"
-	"github.com/hyperledger/fabric/orderer/common/server/pub_sub_server"
-	"github.com/hyperledger/fabric/protos/pubsub"
+	"github.com/hyperledger/fabric/orderer/common/server/list_distribute_server"
+	list_puller "github.com/hyperledger/fabric/protos/listpuller"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -202,9 +202,11 @@ func Start(cmd string, conf *localconfig.TopLevel) {
 
 	initializeProfilingService(conf)
 	ab.RegisterAtomicBroadcastServer(grpcServer.Server(), server)
-	psServer := pub_sub_server.NewPubsubService()
-	pubsub.RegisterPubSubServiceServer(grpcServer.Server(), psServer)
-	blockfilewatcher.InitPublishClient(grpcServer.Address())
+
+	// 初始化distribute_list的一个请求下发服务
+	dlServer := distribute_list_server.InitDistributeListServer()
+	list_puller.RegisterPullListServiceServer(grpcServer.Server(), dlServer)
+
 	logger.Info("Beginning to serve requests")
 	grpcServer.Start()
 }

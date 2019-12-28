@@ -10,7 +10,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/hyperledger/fabric/core/ledger/ledgerconfig"
-	"github.com/hyperledger/fabric/peer/common"
+	"github.com/hyperledger/fabric/peer/common/blockfilewatcher"
 	"net"
 	"net/http"
 	"os"
@@ -434,8 +434,7 @@ func serve(args []string) error {
 	pb.RegisterEndorserServer(peerServer.Server(), auth)
 
 	// zyy: 注册订阅服务
-	subScribeService := common.NewSubscribeServiceServer(viper.GetString("peer.localMspId"), filepath.Join(ledgerconfig.GetBlockStorePath(), "chains"))
-	pb.RegisterSubscribeServiceServer(peerServer.Server(), subScribeService)
+	blockfilewatcher.InitBlockFileEncoder(viper.GetString("peer.localMspId"), filepath.Join(ledgerconfig.GetBlockStorePath(), "chains"))
 
 	go func() {
 		var grpcErr error

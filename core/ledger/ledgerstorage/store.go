@@ -28,7 +28,7 @@ var logger = flogging.MustGetLogger("ledgerstorage")
 type Provider struct {
 	blkStoreProvider            blkstorage.BlockStoreProvider
 	blkStoreProviderWithWathcer blkstorage.BlockStoreProviderWithWatcher
-	watchers                    map[string]blkstorage.BlockFileWatcher
+	watchers                    map[string]*blockfilewatcher.PeerBlockFileWatcher
 	pvtdataStoreProvider        pvtdatastorage.Provider
 }
 
@@ -78,7 +78,7 @@ func NewProviderWithWatcher(metricsProvider metrics.Provider) *Provider {
 	return &Provider{
 		blkStoreProvider:            blockStoreProviderWithWatcher,
 		blkStoreProviderWithWathcer: blockStoreProviderWithWatcher,
-		watchers:                    make(map[string]blkstorage.BlockFileWatcher),
+		watchers:                    make(map[string]*blockfilewatcher.PeerBlockFileWatcher),
 		pvtdataStoreProvider:        pvtStoreProvider,
 	}
 }
@@ -88,19 +88,20 @@ func (p *Provider) Open(ledgerid string) (*Store, error) {
 	var blockStore blkstorage.BlockStore
 	var pvtdataStore pvtdatastorage.Store
 	var err error
-	if _, ok := p.watchers[ledgerid]; ok {
+	var watcher *blockfilewatcher.PeerBlockFileWatcher
+	if watcher, exist := p.watchers[ledgerid]; exist {
 		if blockStore, err = p.blkStoreProvider.OpenBlockStore(ledgerid); err != nil {
 			return nil, err
 		}
 	} else {
 		// zyy 创建一个watcher
-		watcher := blockfilewatcher.NewPeerBlockFileWatcher(ledgerid)
+		watcher = blockfilewatcher.NewPeerBlockFileWatcher(ledgerid)
 		if blockStore, err = p.blkStoreProviderWithWathcer.OpenBlockStoreWithWatcher(ledgerid, watcher); err != nil {
 			return nil, err
 		}
 		p.watchers[ledgerid] = watcher
 	}
-
+	logger.Info("ZYY open block store success")
 	// zyy: 这个pvtdataStore就是在leveldb中存数据
 	if pvtdataStore, err = p.pvtdataStoreProvider.OpenStore(ledgerid); err != nil {
 		return nil, err
@@ -122,6 +123,14 @@ func (p *Provider) Open(ledgerid string) (*Store, error) {
 		return nil, err
 	}
 	store.isPvtstoreAheadOfBlockstore.Store(pvtstoreHeight > info.Height)
+
+	if watcher != nil {
+		genesisBlock, err := store.RetrieveBlockByNumber(0)
+		if err != nil {
+			return nil, err
+		}
+		watcher.SetOrdererAddressFromGenesisBlock(genesisBlock)
+	}
 
 	return store, nil
 }

@@ -20,6 +20,7 @@ import (
 
 // NewGossipMessageComparator creates a MessageReplacingPolicy given a maximum number of blocks to hold
 func NewGossipMessageComparator(dataBlockStorageSize int) common.MessageReplacingPolicy {
+	// 这个dataBlockStorageSize表示缓存里面缓存的区块最多相差size个
 	return (&msgComparator{dataBlockStorageSize: dataBlockStorageSize}).getMsgReplacingPolicy()
 }
 

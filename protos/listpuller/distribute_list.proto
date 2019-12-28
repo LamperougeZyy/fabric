@@ -1,6 +1,6 @@
 syntax="proto3";
 
-package pubsub;
+package list_puller;
 
 message DistributeList {
     string Algorithm = 1;         // 使用的编码算法

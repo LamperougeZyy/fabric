@@ -86,6 +86,8 @@ func (p *batchingEmitterImpl) decrementCounters() {
 	n := len(p.buff)
 	for i := 0; i < n; i++ {
 		msg := p.buff[i]
+		// zyy: iterationsLeft这个参数表示剩余的向相邻peer发送的消息次数
+		// zyy: 当这个参数归零时，表示不需要向对应peer发送消息了
 		msg.iterationsLeft--
 		if msg.iterationsLeft == 0 {
 			p.buff = append(p.buff[:i], p.buff[i+1:]...)

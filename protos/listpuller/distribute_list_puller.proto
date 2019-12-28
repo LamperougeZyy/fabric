@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+import "distribute_list.proto";
+
+package list_puller;
+
+message Request {
+    string ChannelId = 1;
+    string FileSuffix = 2;
+}
+
+service PullListService {
+    rpc GetDistributeList(Request) returns(DistributeList);
+}
