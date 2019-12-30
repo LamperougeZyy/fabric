@@ -7,6 +7,7 @@ import (
 	"github.com/hyperledger/fabric/common/configtx"
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/klauspost/reedsolomon"
+	"go.etcd.io/etcd/pkg/fileutil"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -64,6 +65,11 @@ func (bfpw *PeerBlockFileWatcher) BlockFileFull(suffixNum int) {
 }
 
 func (bfpw *PeerBlockFileWatcher) SetOrdererAddressFromGenesisBlock(genesisblock *common.Block) error {
+	if len(bfpw.OrererAddresses) != 0 {
+		logger.Info("orderer addresses has already set")
+		return nil
+	}
+
 	env := &common.Envelope{}
 	err := proto.Unmarshal(genesisblock.Data.Data[0], env)
 	if err != nil {
@@ -87,14 +93,49 @@ func (bfpw *PeerBlockFileWatcher) SetOrdererAddressFromGenesisBlock(genesisblock
 	}
 
 	bfpw.OrererAddresses = ordererAddressesConfig.Addresses
+
+	// 对genesisblock做持久化处理
+	genesisBlockFilePath := filepath.Join(GetBlockFileEncoderInstance().blockStorePath, bfpw.ChannelId, "genesisblock")
+	f, err := os.Create(genesisBlockFilePath)
+	if err != nil {
+		return err
+	}
+	b, err := proto.Marshal(genesisblock)
+	_, err = f.Write(b)
+	if err != nil {
+		return err
+	}
+	f.Close()
+
 	return nil
 }
 
-func NewPeerBlockFileWatcher(channelId string) *PeerBlockFileWatcher {
-	return &PeerBlockFileWatcher{
+func NewPeerBlockFileWatcher(channelId string) (*PeerBlockFileWatcher, error) {
+	watcher := &PeerBlockFileWatcher{
 		ChannelId:       channelId,
 		OrererAddresses: []string{},
 	}
+
+	genesisBlockFilePath := filepath.Join(GetBlockFileEncoderInstance().blockStorePath, channelId, "genesisblock")
+	if !fileutil.Exist(genesisBlockFilePath) {
+		logger.Info("Get genesis block from join cmd")
+		return watcher, nil
+	}
+	bfile, err := ioutil.ReadFile(genesisBlockFilePath)
+	if err != nil {
+		return nil, err
+	}
+	genesisBlock := new(common.Block)
+	err = proto.Unmarshal(bfile, genesisBlock)
+	if err != nil {
+		return nil, err
+	}
+	err = watcher.SetOrdererAddressFromGenesisBlock(genesisBlock)
+	if err != nil {
+		return nil, err
+	}
+
+	return watcher, nil
 }
 
 type BlockFileEncoder struct {

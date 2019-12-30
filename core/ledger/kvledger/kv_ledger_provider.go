@@ -135,6 +135,16 @@ func (provider *Provider) Create(genesisBlock *common.Block) (ledger.PeerLedger,
 		return nil, err
 	}
 	panicOnErr(provider.idStore.createLedgerID(ledgerID, genesisBlock), "Error while marking ledger as created")
+
+	watcher, err := provider.ledgerStoreProvider.GetLedgerWatcher(ledgerID)
+	if err != nil {
+		return nil, err
+	}
+	err = watcher.SetOrdererAddressFromGenesisBlock(genesisBlock)
+	if err != nil {
+		return nil, err
+	}
+	logger.Debugf("Set ledger %s watcher orderer address success", ledgerID)
 	return lgr, nil
 }
 

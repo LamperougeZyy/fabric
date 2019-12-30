@@ -179,6 +179,8 @@ func serve(args []string) error {
 	logObserver := floggingmetrics.NewObserver(metricsProvider)
 	flogging.Global.SetObserver(logObserver)
 
+	// zyy: 初始化区块文件编码实例
+	blockfilewatcher.InitBlockFileEncoder(viper.GetString("peer.localMspId"), filepath.Join(ledgerconfig.GetBlockStorePath(), "chains"))
 	membershipInfoProvider := privdata.NewMembershipInfoProvider(createSelfSignedData(), identityDeserializerFactory)
 	//initialize resource management exit
 	ledgermgmt.Initialize(
@@ -432,9 +434,6 @@ func serve(args []string) error {
 	auth := authHandler.ChainFilters(serverEndorser, authFilters...)
 	// Register the Endorser server
 	pb.RegisterEndorserServer(peerServer.Server(), auth)
-
-	// zyy: 注册订阅服务
-	blockfilewatcher.InitBlockFileEncoder(viper.GetString("peer.localMspId"), filepath.Join(ledgerconfig.GetBlockStorePath(), "chains"))
 
 	go func() {
 		var grpcErr error

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package ledgerstorage
 
 import (
+	"fmt"
 	"github.com/hyperledger/fabric/peer/common/blockfilewatcher"
 	"sync"
 	"sync/atomic"
@@ -83,19 +84,29 @@ func NewProviderWithWatcher(metricsProvider metrics.Provider) *Provider {
 	}
 }
 
+func (p *Provider) GetLedgerWatcher(ledgerid string) (*blockfilewatcher.PeerBlockFileWatcher, error) {
+	if wathcer, exist := p.watchers[ledgerid]; !exist {
+		return nil, fmt.Errorf("watcher of %+v do not exist", ledgerid)
+	} else {
+		return wathcer, nil
+	}
+}
+
 // Open opens the store
 func (p *Provider) Open(ledgerid string) (*Store, error) {
 	var blockStore blkstorage.BlockStore
 	var pvtdataStore pvtdatastorage.Store
 	var err error
-	var watcher *blockfilewatcher.PeerBlockFileWatcher
 	if watcher, exist := p.watchers[ledgerid]; exist {
 		if blockStore, err = p.blkStoreProvider.OpenBlockStore(ledgerid); err != nil {
 			return nil, err
 		}
 	} else {
 		// zyy 创建一个watcher
-		watcher = blockfilewatcher.NewPeerBlockFileWatcher(ledgerid)
+		watcher, err = blockfilewatcher.NewPeerBlockFileWatcher(ledgerid)
+		if err != nil {
+			return nil, fmt.Errorf("create ledger watcher failed: %+v", err)
+		}
 		if blockStore, err = p.blkStoreProviderWithWathcer.OpenBlockStoreWithWatcher(ledgerid, watcher); err != nil {
 			return nil, err
 		}
@@ -123,15 +134,6 @@ func (p *Provider) Open(ledgerid string) (*Store, error) {
 		return nil, err
 	}
 	store.isPvtstoreAheadOfBlockstore.Store(pvtstoreHeight > info.Height)
-
-	if watcher != nil {
-		genesisBlock, err := store.RetrieveBlockByNumber(0)
-		if err != nil {
-			return nil, err
-		}
-		watcher.SetOrdererAddressFromGenesisBlock(genesisBlock)
-	}
-
 	return store, nil
 }
 
