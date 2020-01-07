@@ -74,7 +74,16 @@ type BlockFileWatcher interface {
 	BlockFileFull(suffixNum int)
 }
 
-type BlockFileNotifier interface {
+type BlockFileRecoverer interface {
+	BlockFileRecover(suffixNum string)
+}
+
+type BlockFileWatcherNotifier interface {
 	Notify(suffixNum int)
 	RegistWatcher(watcher BlockFileWatcher)
+}
+
+type BlockFileRecovererNotifier interface {
+	Notify(channelId string, suffixNum string)
+	RegistRecoverer(channelId string, recoverer BlockFileRecoverer)
 }

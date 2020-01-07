@@ -9,7 +9,6 @@ package kvledger
 import (
 	"bytes"
 	"fmt"
-
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/common/ledger/util/leveldbhelper"
 	"github.com/hyperledger/fabric/core/ledger"
@@ -20,6 +19,7 @@ import (
 	"github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/privacyenabledstate"
 	"github.com/hyperledger/fabric/core/ledger/ledgerconfig"
 	"github.com/hyperledger/fabric/core/ledger/ledgerstorage"
+	"github.com/hyperledger/fabric/peer/common/blockfilerecoverer"
 	"github.com/hyperledger/fabric/protos/common"
 	"github.com/hyperledger/fabric/protos/utils"
 	"github.com/pkg/errors"
@@ -136,6 +136,7 @@ func (provider *Provider) Create(genesisBlock *common.Block) (ledger.PeerLedger,
 	}
 	panicOnErr(provider.idStore.createLedgerID(ledgerID, genesisBlock), "Error while marking ledger as created")
 
+	// zyy: 补全watcher参数
 	watcher, err := provider.ledgerStoreProvider.GetLedgerWatcher(ledgerID)
 	if err != nil {
 		return nil, err
@@ -145,6 +146,8 @@ func (provider *Provider) Create(genesisBlock *common.Block) (ledger.PeerLedger,
 		return nil, err
 	}
 	logger.Debugf("Set ledger %s watcher orderer address success", ledgerID)
+	// zyy: 初始化recoverer
+	blockfilerecoverer.InitBlockFileRecoverer(ledgerID)
 	return lgr, nil
 }
 

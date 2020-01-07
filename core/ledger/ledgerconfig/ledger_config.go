@@ -22,6 +22,7 @@ func IsCouchDBEnabled() bool {
 	return false
 }
 
+const confDistributeList = "distributeListLeveldb"
 const confPeerFileSystemPath = "peer.fileSystemPath"
 const confLedgersData = "ledgersData"
 const confLedgerProvider = "ledgerProvider"
@@ -57,6 +58,11 @@ func GetLedgerProviderPath() string {
 // GetStateLevelDBPath returns the filesystem path that is used to maintain the state level db
 func GetStateLevelDBPath() string {
 	return filepath.Join(GetRootPath(), confStateleveldb)
+}
+
+// zyy:返回distribute list leveldb文件存储路径
+func GetDistributeListLevelDBPath() string {
+	return filepath.Join(GetRootPath(), confDistributeList)
 }
 
 // GetHistoryLevelDBPath returns the filesystem path that is used to maintain the history level db

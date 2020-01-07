@@ -6,6 +6,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/common/configtx"
 	"github.com/hyperledger/fabric/common/flogging"
+	"github.com/hyperledger/fabric/peer/common/blockfilerecoverer/distributeliststore"
 	"github.com/klauspost/reedsolomon"
 	"go.etcd.io/etcd/pkg/fileutil"
 	"io/ioutil"
@@ -54,8 +55,22 @@ func (bfpw *PeerBlockFileWatcher) BlockFileFull(suffixNum int) {
 			logger.Errorf("Get distribute list failed! %+v", err.Error())
 			break
 		}
-		blockfileEncoder := GetBlockFileEncoderInstance()
-		err = blockfileEncoder.StartEncodeBlockFile(suffixNum, distributeList)
+
+		// zyy: 保存到levelDB中
+		provider := distributeliststore.GetDistributeListDBProviderInst()
+		distributeListStore, err := provider.GetDBHandle(bfpw.ChannelId)
+		if err != nil {
+			logger.Errorf("Fail to open the distribute list store")
+			break
+		}
+		err = distributeListStore.CommitDistributeList(distributeList)
+		if err != nil {
+			logger.Errorf("Fail to commit the distribute list into the leveldb")
+			break
+		}
+
+		// zyy: 开始对文件进行编码
+		err = GetBlockFileEncoderInstance().StartEncodeBlockFile(suffixNum, distributeList)
 		if err != nil {
 			logger.Errorf("Encode block file error: %+v", err.Error())
 			break
@@ -134,7 +149,6 @@ func NewPeerBlockFileWatcher(channelId string) (*PeerBlockFileWatcher, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return watcher, nil
 }
 
@@ -143,11 +157,15 @@ type BlockFileEncoder struct {
 	blockStorePath string
 }
 
-var blockFileEncoderInst BlockFileEncoder
+var blockFileEncoderInst *BlockFileEncoder
 var once sync.Once
 
 func (s *BlockFileEncoder) StartEncodeBlockFile(suffixNum int, distributeList *list_puller.DistributeList) error {
 	return encodeBlockfile(suffixNum, distributeList, s.mspId, s.blockStorePath)
+}
+
+func (s *BlockFileEncoder) GetMSPId() string {
+	return s.mspId
 }
 
 func encodeBlockfile(suffixNum int, distributeList *list_puller.DistributeList, mspId string, blockStorePath string) error {
@@ -168,8 +186,8 @@ func encodeBlockfile(suffixNum int, distributeList *list_puller.DistributeList, 
 	}
 
 	fileBlockList := make([]int, 0)
-	for fileBlockName, orgId := range distributeList.Item {
-		if strings.ToLower(mspId) == strings.ToLower(orgId) {
+	for fileBlockName, locInfo := range distributeList.Item {
+		if strings.ToLower(mspId) == strings.ToLower(locInfo.OrgName) {
 			fileNums := strings.Split(fileBlockName, "_")
 			fileNum, err := strconv.Atoi(fileNums[len(fileNums)-1])
 			if err != nil {
@@ -192,19 +210,19 @@ func encodeBlockfile(suffixNum int, distributeList *list_puller.DistributeList, 
 		f.Close()
 	}
 
-	// os.Remove(blockFile)
+	os.Remove(blockFile)
 	return nil
 }
 
 func InitBlockFileEncoder(mspId string, path string) {
 	once.Do(func() {
-		blockFileEncoderInst = BlockFileEncoder{
+		blockFileEncoderInst = &BlockFileEncoder{
 			mspId:          mspId,
 			blockStorePath: path,
 		}
 	})
 }
 
-func GetBlockFileEncoderInstance() BlockFileEncoder {
+func GetBlockFileEncoderInstance() *BlockFileEncoder {
 	return blockFileEncoderInst
 }

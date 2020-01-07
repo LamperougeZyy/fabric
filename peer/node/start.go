@@ -9,7 +9,10 @@ package node
 import (
 	"context"
 	"fmt"
+	"github.com/hyperledger/fabric/common/ledger/blkstorage/fsblkstorage"
 	"github.com/hyperledger/fabric/core/ledger/ledgerconfig"
+	"github.com/hyperledger/fabric/peer/common/blockfilerecoverer/distributeliststore"
+	"github.com/hyperledger/fabric/peer/common/blockfiletransfer"
 	"github.com/hyperledger/fabric/peer/common/blockfilewatcher"
 	"net"
 	"net/http"
@@ -142,6 +145,9 @@ func serve(args []string) error {
 		panic("Unsupported msp type " + msp.ProviderTypeToString(mspType))
 	}
 
+	blockfilewatcher.InitBlockFileEncoder(viper.GetString("peer.localMspId"), filepath.Join(ledgerconfig.GetBlockStorePath(), "chains"))
+	fsblkstorage.InitBlockFileRecoverMgr()
+	distributeliststore.InitDistributeListDBProvider()
 	// Trace RPCs with the golang.org/x/net/trace package. This was moved out of
 	// the deliver service connection factory as it has process wide implications
 	// and was racy with respect to initialization of gRPC clients and servers.
@@ -180,7 +186,6 @@ func serve(args []string) error {
 	flogging.Global.SetObserver(logObserver)
 
 	// zyy: 初始化区块文件编码实例
-	blockfilewatcher.InitBlockFileEncoder(viper.GetString("peer.localMspId"), filepath.Join(ledgerconfig.GetBlockStorePath(), "chains"))
 	membershipInfoProvider := privdata.NewMembershipInfoProvider(createSelfSignedData(), identityDeserializerFactory)
 	//initialize resource management exit
 	ledgermgmt.Initialize(
@@ -434,6 +439,10 @@ func serve(args []string) error {
 	auth := authHandler.ChainFilters(serverEndorser, authFilters...)
 	// Register the Endorser server
 	pb.RegisterEndorserServer(peerServer.Server(), auth)
+
+	// zyy: 注册文件传输服务
+	ledgerTransferService := blockfiletransfer.NewLedgerTransferService()
+	common2.RegisterLedgerTransferServer(peerServer.Server(), ledgerTransferService)
 
 	go func() {
 		var grpcErr error

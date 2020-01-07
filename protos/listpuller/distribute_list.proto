@@ -2,11 +2,16 @@ syntax="proto3";
 
 package list_puller;
 
+message LocationInfo {
+    string OrgName = 1;
+    bytes  AnchorPeers = 2;
+}
+
 message DistributeList {
     string Algorithm = 1;         // 使用的编码算法
     string ChannelId = 2;         // 每个通道对应一个文件夹账本，这个记录通道名称
     string FileSuffix = 3;        // 文件后缀编号，例如blockfile_000001的后六位数字就是
     int32 ParShards = 4;
     int32 DataShards = 5;
-    map<string, string> Item = 6; // key 是节点的domain, value 是保留的文件块号
+    map<string, LocationInfo> Item = 6; // key 是节点的domain, value 是保留的文件块号
 }

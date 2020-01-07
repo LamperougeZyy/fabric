@@ -40,16 +40,21 @@ func (bfw *OrdererBlockFileWatcher) BlockFileFull(suffixNum int) {
 		logger.Fatalf("Watcher Get Org Information error! %s", err.Error())
 	}
 	orgNameList := make([]string, 0)
+	orgName2anchorPeers := make(map[string][]byte)
 	for orgName := range orgs {
 		orgNameList = append(orgNameList, orgName)
+		orgName2anchorPeers[orgName] = orgs[orgName].Values["AnchorPeers"].Value
 	}
 	sort.Strings(orgNameList)
 
-	list := make(map[string]string)
+	list := make(map[string]*list_puller.LocationInfo)
 	for i := 0; i < ParShards+DataShards; i++ {
 		orgName := orgNameList[i%len(orgNameList)]
-		fileBlock := fmt.Sprintf("%s_%06d_%d", bfw.channelId, suffixNum, i)
-		list[fileBlock] = orgName
+		fileBlockId := fmt.Sprintf("%s_%06d_%d", bfw.channelId, suffixNum, i)
+		list[fileBlockId] = &list_puller.LocationInfo{
+			OrgName:     orgName,
+			AnchorPeers: orgName2anchorPeers[orgName],
+		}
 	}
 
 	distributeList.Item = list

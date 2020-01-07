@@ -9,8 +9,10 @@ package fsblkstorage
 import (
 	"bufio"
 	"fmt"
+	"go.etcd.io/etcd/pkg/fileutil"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
@@ -53,6 +55,13 @@ type blockPlacementInfo struct {
 ////////////////////////////////////
 func newBlockfileStream(rootDir string, fileNum int, startOffset int64) (*blockfileStream, error) {
 	filePath := deriveBlockfilePath(rootDir, fileNum)
+	//zyy : 在这里完成对目标文件的恢复工作
+	if !fileutil.Exist(filePath) {
+		logger.Debugf("File has been encoded, need recover")
+		strArr := strings.Split(rootDir, "/")
+		channelId := strArr[len(strArr)-1]
+		GetBlockFileRecoverMgrInst().Notify(channelId, fmt.Sprintf("%06d", fileNum))
+	}
 	logger.Debugf("newBlockfileStream(): filePath=[%s], startOffset=[%d]", filePath, startOffset)
 	var file *os.File
 	var err error
