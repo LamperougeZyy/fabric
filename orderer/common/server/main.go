@@ -70,7 +70,8 @@ var (
 	version   = app.Command("version", "Show version information")
 	benchmark = app.Command("benchmark", "Run orderer in benchmark mode")
 
-	clusterTypes = map[string]struct{}{"etcdraft": {}}
+	// zyy: hotstuff和etcdraft一样是属于集群类型的共识算法模块，理论上通信的一些工具应该可以公用
+	clusterTypes = map[string]struct{}{"etcdraft": {}, "hotstuff": {}}
 )
 
 // Main is the entry point of orderer process
@@ -115,7 +116,7 @@ func Start(cmd string, conf *localconfig.TopLevel) {
 	sysChanLastConfigBlock := extractSysChanLastConfig(lf, bootstrapBlock)
 	clusterBootBlock := selectClusterBootBlock(bootstrapBlock, sysChanLastConfigBlock)
 
-	clusterType := isClusterType(clusterBootBlock)
+	_, clusterType := isClusterType(clusterBootBlock)
 	signer := localmsp.NewSigner()
 
 	clusterClientConfig := initializeClusterClientConfig(conf, clusterType, bootstrapBlock)
@@ -579,9 +580,11 @@ func initializeBootstrapChannel(genesisBlock *cb.Block, lf blockledger.FactoryWi
 	}
 }
 
-func isClusterType(genesisBlock *cb.Block) bool {
-	_, exists := clusterTypes[consensusType(genesisBlock)]
-	return exists
+func isClusterType(genesisBlock *cb.Block) (string, bool) {
+	// zyy: 现在cluster type不止一种了，因此需要提取出key值，来判断是哪种共识算法
+	consensus := consensusType(genesisBlock)
+	_, exists := clusterTypes[consensus]
+	return consensus, exists
 }
 
 func consensusType(genesisBlock *cb.Block) string {
@@ -664,11 +667,27 @@ func initializeMultichannelRegistrar(
 	// Note, we pass a 'nil' channel here, we could pass a channel that
 	// closes if we wished to cleanup this routine on exit.
 	go kafkaMetrics.PollGoMetricsUntilStop(time.Minute, nil)
-	if isClusterType(bootstrapBlock) {
-		initializeEtcdraftConsenter(consenters, conf, lf, clusterDialer, bootstrapBlock, ri, srvConf, srv, registrar, metricsProvider)
+	if consensus, exist := isClusterType(bootstrapBlock); exist {
+		if consensus == "etcdraft" {
+			initializeEtcdraftConsenter(consenters, conf, lf, clusterDialer, bootstrapBlock, ri, srvConf, srv, registrar, metricsProvider)
+		} else if consensus == "hotstuff" {
+			// todo zyy : 初始化hotstuff的consenter
+			initializeHotstuffConsenter(consenters, conf, lf, clusterDialer, bootstrapBlock)
+		}
 	}
 	registrar.Initialize(consenters)
 	return registrar
+}
+
+func initializeHotstuffConsenter(
+	consenters map[string]consensus.Consenter,
+	conf *localconfig.TopLevel,
+	lf blockledger.FactoryWithWatcher,
+	clusterDialer *cluster.PredicateDialer,
+	bootstrapBlock *cb.Block,
+) {
+	// todo: zyy 对hotstuff进行初始化工作
+
 }
 
 func initializeEtcdraftConsenter(

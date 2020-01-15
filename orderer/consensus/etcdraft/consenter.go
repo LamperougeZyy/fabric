@@ -104,6 +104,7 @@ func (c *Consenter) ReceiverByChain(channelID string) MessageReceiver {
 	return nil
 }
 
+// zyy: 这个函数是根据证书来判断自己是否服务于当前channel的排序
 func (c *Consenter) detectSelfID(consenters map[uint64]*etcdraft.Consenter) (uint64, error) {
 	thisNodeCertAsDER, err := pemToDER(c.Cert, 0, "server", c.Logger)
 	if err != nil {
@@ -168,6 +169,7 @@ func (c *Consenter) HandleChain(support consensus.ConsenterSupport, metadata *co
 		return &inactive.Chain{Err: errors.Errorf("channel %s is not serviced by me", support.ChainID())}, nil
 	}
 
+	// zyy: 设置节点的驱逐时间
 	var evictionSuspicion time.Duration
 	if c.EtcdRaftConfig.EvictionSuspicion == "" {
 		c.Logger.Infof("EvictionSuspicion not set, defaulting to %v", DefaultEvictionSuspicion)
