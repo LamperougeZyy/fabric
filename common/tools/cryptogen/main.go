@@ -8,6 +8,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/kilic/bls12-381/blssig"
 	"io"
 	"io/ioutil"
 	"os"
@@ -625,6 +626,43 @@ func generateNodes(baseDir string, nodes []NodeSpec, signCA *ca.CA, tlsCA *ca.CA
 			}
 		}
 	}
+
+	// zyy: 在这里创建pubkey合集
+	err := os.Mkdir("blsSecKey", os.ModeDir)
+	if err != nil {
+		fmt.Printf("Create public key dir error: %s", err.Error())
+		os.Exit(1)
+	}
+
+	for _, node := range nodes {
+		nodeKeyStoreDir := filepath.Join(baseDir, node.CommonName, "msp", "keystore")
+		keyFile, err := ioutil.ReadDir(nodeKeyStoreDir)
+		if err != nil {
+			fmt.Printf("Read key store dir error: %s", err.Error())
+			os.Exit(1)
+		}
+		if len(keyFile) != 1 {
+			fmt.Printf("Need 1 key file but get %d", len(keyFile))
+			os.Exit(1)
+		}
+		keyFileBytes, err := ioutil.ReadFile(keyFile[0].Name())
+		if err != nil {
+			fmt.Printf("Read key file error: %s", err.Error())
+			os.Exit(1)
+		}
+		secKey, err := blssig.SecretKeyFromBytes(keyFileBytes)
+		if err != nil {
+			fmt.Printf("Get secret key from byte error: %s", err.Error())
+			os.Exit(1)
+		}
+		// store in file
+		err = ioutil.WriteFile(node.CommonName, secKey.Bytes(), os.ModePerm)
+		if err != nil {
+			fmt.Printf("Write sec key failed! %s", err.Error())
+			os.Exit(1)
+		}
+	}
+
 }
 
 func generateOrdererOrg(baseDir string, orgSpec OrgSpec) {

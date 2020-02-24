@@ -180,6 +180,18 @@
   revision = "19279f0492417475b6bfbd0aa529f73e8f178fb5"
 
 [[projects]]
+  branch = "master"
+  digest = "1:e5210b0566972fca860140242bcaa3a73e1a10e3b1d378eeb6dfb593c3df08a8"
+  name = "github.com/dshulyak/go-hotstuff"
+  packages = [
+    ".",
+    "crypto",
+    "types",
+  ]
+  pruneopts = "NUT"
+  revision = "2545c4f5ebf97e38d8e179eaf04016f24c6c4848"
+
+[[projects]]
   digest = "1:b7ffca49e9cfd3dfb04a8e0a59347708c6f78f68476a32c5e0a0edca5d1b258c"
   name = "github.com/dustin/go-humanize"
   packages = ["."]
@@ -365,6 +377,17 @@
   pruneopts = "NUT"
   revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
   version = "v1.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:d35be71af3b7bbe710de4efc571dbf28b6e15273954062533cd2b1ef9251c745"
+  name = "github.com/kilic/bls12-381"
+  packages = [
+    ".",
+    "blssig",
+  ]
+  pruneopts = "NUT"
+  revision = "038659eaa1899e2a768e89ef29101867019d0802"
 
 [[projects]]
   branch = "master"
@@ -773,9 +796,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:2e1733bde491e422f3c9cf7bf8b4cb3d11c867ad3017fec8897923f6106a3a51"
+  digest = "1:d94fe8fb5c831bd43d0c696a95c54fccf72cef08c5a1fa0433ceb492260f9d81"
   name = "golang.org/x/crypto"
   packages = [
+    "blake2s",
     "sha3",
     "ssh/terminal",
   ]
@@ -821,9 +845,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:847ffe30bb2463c17bf12bac2558b63f5dc104fd5920c8adf8c150a08cd176fb"
+  digest = "1:4a44ad185d16d398d7330d968d2fe1f4a9526b15b219218c2df802ac20ba6153"
   name = "golang.org/x/sys"
   packages = [
+    "cpu",
     "unix",
     "windows",
   ]
@@ -962,6 +987,7 @@
     "github.com/Shopify/sarama/mocks",
     "github.com/davecgh/go-spew/spew",
     "github.com/docker/docker/pkg/pubsub",
+    "github.com/dshulyak/go-hotstuff",
     "github.com/fsouza/go-dockerclient",
     "github.com/go-kit/kit/metrics",
     "github.com/go-kit/kit/metrics/prometheus",

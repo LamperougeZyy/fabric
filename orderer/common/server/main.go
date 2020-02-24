@@ -345,6 +345,7 @@ type loadPEMFunc func(string) ([]byte, error)
 // configureClusterListener gets a ServerConfig and a GRPCServer, and:
 // 1) If the TopLevel configuration states that the cluster configuration for the cluster gRPC service is missing, returns them back.
 // 2) Else, returns a new ServerConfig and a new gRPC server (with its own TLS listener on a different port).
+// zyy: 这个地方是配置raft集群的一个节点的grpc服务
 func configureClusterListener(conf *localconfig.TopLevel, generalConf comm.ServerConfig, generalSrv *comm.GRPCServer, loadPEM loadPEMFunc) (comm.ServerConfig, *comm.GRPCServer) {
 	clusterConf := conf.General.Cluster
 	// If listen address is not configured, or the TLS certificate isn't configured,
@@ -409,6 +410,7 @@ func configureClusterListener(conf *localconfig.TopLevel, generalConf comm.Serve
 	return serverConf, srv
 }
 
+// zyy: cluster主要配置orderer和orderer之间通信的配置，这里要求必须使用tls通信
 func initializeClusterClientConfig(conf *localconfig.TopLevel, clusterType bool, bootstrapBlock *cb.Block) comm.ClientConfig {
 	if clusterType && !conf.General.TLS.Enabled {
 		logger.Panicf("TLS is required for running ordering nodes of type %s.", consensusType(bootstrapBlock))
@@ -704,6 +706,7 @@ func initializeEtcdraftConsenter(
 ) {
 	replicationRefreshInterval := conf.General.Cluster.ReplicationBackgroundRefreshInterval
 	if replicationRefreshInterval == 0 {
+		// zyy 刷新时间默认是5分钟
 		replicationRefreshInterval = defaultReplicationBackgroundRefreshInterval
 	}
 
@@ -720,12 +723,13 @@ func initializeEtcdraftConsenter(
 		return multichannel.ConfigBlock(systemLedger)
 	}
 
+	// zyy 这个是raft在竞选leader冲突时的休息时间
 	exponentialSleep := exponentialDurationSeries(replicationBackgroundInitialRefreshInterval, replicationRefreshInterval)
 	ticker := newTicker(exponentialSleep)
 
 	icr := &inactiveChainReplicator{
 		logger:                            logger,
-		scheduleChan:                      ticker.C,
+		scheduleChan:                      ticker.C, //zyy 这个C是个通道，当收到消息时会触发下一次的事件
 		quitChan:                          make(chan struct{}),
 		replicator:                        ri,
 		chains2CreationCallbacks:          make(map[string]chainCreation),
