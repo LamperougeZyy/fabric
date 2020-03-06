@@ -56,6 +56,9 @@ type General struct {
 	LocalMSPID        string
 	BCCSP             *bccsp.FactoryOpts
 	Authentication    Authentication
+
+	// zyy
+	BLSSecKeysDir string
 }
 
 type Cluster struct {
@@ -243,6 +246,7 @@ var Defaults = TopLevel{
 		Authentication: Authentication{
 			TimeWindow: time.Duration(15 * time.Minute),
 		},
+		BLSSecKeysDir: "blsSecKey",
 	},
 	RAMLedger: RAMLedger{
 		HistorySize: 10000,
@@ -335,6 +339,7 @@ func (c *TopLevel) completeInitialization(configDir string) {
 		coreconfig.TranslatePathInPlace(configDir, &c.General.TLS.Certificate)
 		coreconfig.TranslatePathInPlace(configDir, &c.General.GenesisFile)
 		coreconfig.TranslatePathInPlace(configDir, &c.General.LocalMSPDir)
+		coreconfig.TranslatePathInPlace(configDir, &c.General.BLSSecKeysDir)
 	}()
 
 	for {

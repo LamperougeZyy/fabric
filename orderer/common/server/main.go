@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger/fabric/orderer/common/blockfetcher"
 	"github.com/hyperledger/fabric/orderer/common/blockfilewatcher"
 	"github.com/hyperledger/fabric/orderer/common/server/pub_sub_server"
+	"github.com/hyperledger/fabric/orderer/consensus/hotstuff"
 	"github.com/hyperledger/fabric/protos/pubsub"
 	"io/ioutil"
 	"net"
@@ -674,7 +675,7 @@ func initializeMultichannelRegistrar(
 			initializeEtcdraftConsenter(consenters, conf, lf, clusterDialer, bootstrapBlock, ri, srvConf, srv, registrar, metricsProvider)
 		} else if consensus == "hotstuff" {
 			// todo zyy : 初始化hotstuff的consenter
-			initializeHotstuffConsenter(consenters, conf, lf, clusterDialer, bootstrapBlock)
+			initializeHotstuffConsenter(consenters, conf, lf, clusterDialer, bootstrapBlock, ri, srvConf, srv, registrar, metricsProvider)
 		}
 	}
 	registrar.Initialize(consenters)
@@ -687,9 +688,54 @@ func initializeHotstuffConsenter(
 	lf blockledger.FactoryWithWatcher,
 	clusterDialer *cluster.PredicateDialer,
 	bootstrapBlock *cb.Block,
+	ri *replicationInitiator,
+	srvConf comm.ServerConfig,
+	srv *comm.GRPCServer,
+	registrar *multichannel.Registrar,
+	metricsProvider metrics.Provider,
 ) {
 	// todo: zyy 对hotstuff进行初始化工作
+	replicationRefreshInterval := conf.General.Cluster.ReplicationBackgroundRefreshInterval
+	if replicationRefreshInterval == 0 {
+		// zyy 刷新时间默认是5分钟
+		replicationRefreshInterval = defaultReplicationBackgroundRefreshInterval
+	}
 
+	systemChannelName, err := utils.GetChainIDFromBlock(bootstrapBlock)
+	if err != nil {
+		ri.logger.Panicf("Failed extracting system channel name from bootstrap block: %v", err)
+	}
+	watcher := blockfilewatcher.NewOrdererBlockFileWatcher(systemChannelName)
+	systemLedger, err := lf.GetOrCreateWithWatcher(systemChannelName, watcher)
+	if err != nil {
+		ri.logger.Panicf("Failed obtaining system channel (%s) ledger: %v", systemChannelName, err)
+	}
+	getConfigBlock := func() *cb.Block {
+		return multichannel.ConfigBlock(systemLedger)
+	}
+
+	exponentialSleep := exponentialDurationSeries(replicationBackgroundInitialRefreshInterval, replicationRefreshInterval)
+	ticker := newTicker(exponentialSleep)
+
+	icr := &inactiveChainReplicator{
+		logger:                            logger,
+		scheduleChan:                      ticker.C, //zyy 这个C是个通道，当收到消息时会触发下一次的事件
+		quitChan:                          make(chan struct{}),
+		replicator:                        ri,
+		chains2CreationCallbacks:          make(map[string]chainCreation),
+		retrieveLastSysChannelConfigBlock: getConfigBlock,
+		registerChain:                     ri.registerChain,
+	}
+
+	// Use the inactiveChainReplicator as a channel lister, since it has knowledge
+	// of all inactive chains.
+	// This is to prevent us pulling the entire system chain when attempting to enumerate
+	// the channels in the system.
+	ri.channelLister = icr
+
+	go icr.run()
+	hotstuffconsenter := hotstuff.New(clusterDialer, conf, srvConf, srv, registrar, icr, metricsProvider)
+	consenters["hotstuff"] = hotstuffconsenter
 }
 
 func initializeEtcdraftConsenter(
@@ -723,7 +769,6 @@ func initializeEtcdraftConsenter(
 		return multichannel.ConfigBlock(systemLedger)
 	}
 
-	// zyy 这个是raft在竞选leader冲突时的休息时间
 	exponentialSleep := exponentialDurationSeries(replicationBackgroundInitialRefreshInterval, replicationRefreshInterval)
 	ticker := newTicker(exponentialSleep)
 
